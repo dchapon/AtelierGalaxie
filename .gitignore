@@ -1,0 +1,5 @@
+png/
+*.log
+*.aux
+.idea/
+.ipynb_checkpoints/
