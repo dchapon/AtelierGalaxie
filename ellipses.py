@@ -9,7 +9,7 @@ class EllipsisStack(ipywidgets.HBox):
         self.rot_txt = rotate_text
         output = ipywidgets.Output()
         self.fig = None
-        self.dpi = 150
+        self.dpi = 200
         self.ax = None
         self.ax_logo = None
         self.logo = P.imread("CEA_Irfu.png")
@@ -18,32 +18,39 @@ class EllipsisStack(ipywidgets.HBox):
             self.create_figure_and_axis()
         self.inserted_txt_2 = "JACQUES PREVERT"
         self.inserted_txt_1 = "École maternelle"
-        self.letter_cols = ['y', 'c', 'g', 'r']
+        self.letter_cols = ['y', 'b', 'g', 'r']
 
         self.n = 15
+        self.star_col = "red"
         self.a0 = 8.4
         self.b0 = 5.9
-        self.np0 = 4000
-        self.extinct = 2
+        self.np0 = 6000
+        self.extinct = 0.9
+        self.markersize = 0.9
         self.do_rot = True
         self.plot_text = True
         self.dt = 25.0
 
         # Define controls
         n_slider = ipywidgets.IntSlider(min=5, max=50, value=self.n, step=1, description="n", continuous_update=True)
-        ext_slider = ipywidgets.IntSlider(min=0, max=4, value=self.extinct, step=1, description="extinction",
-                                          continuous_update=True)
+        ext_slider = ipywidgets.FloatSlider(min=0.1, max=5.0, value=self.extinct, step=0.1, description="extinction",
+                                            continuous_update=True)
         a0_slider = ipywidgets.FloatSlider(min=1.0, max=10.0, value=self.a0, step=0.1, readout_format='.1f',
                                            continuous_update=False, description="a")
         b0_slider = ipywidgets.FloatSlider(min=1.0, max=10.0, value=self.b0, step=0.1, readout_format='.1f',
                                            continuous_update=False, description="b")
-        np0_slider = ipywidgets.IntSlider(min=100, max=5000, value=self.np0, step=10, description="np0",
+        np0_slider = ipywidgets.IntSlider(min=100, max=10000, value=self.np0, step=10, description="np0",
                                           continuous_update=False)
+        ms_slider = ipywidgets.FloatSlider(min=0.0, max=10.0, value=self.markersize, step=0.1, description="markersize",
+                                           continuous_update=True)
         dt_slider = ipywidgets.FloatSlider(min=10.0, max=50.0, value=self.dt, step=1.0, readout_format='.1f',
                                            continuous_update=False, description="dt (deg)")
         rot_cb = ipywidgets.Checkbox(value=self.do_rot, description="Rotate ellipses")
+        stcol_selector = ipywidgets.Dropdown(options=["red",  "blue"], value=self.star_col, description="star color")
 
-        controls = ipywidgets.VBox([n_slider, ext_slider, a0_slider, b0_slider, np0_slider, dt_slider, rot_cb])
+        controls = ipywidgets.VBox([n_slider, ext_slider, a0_slider, b0_slider, np0_slider, ms_slider, dt_slider,
+                                    rot_cb, stcol_selector])
+
         controls.layout = self.make_box_layout()
         out_box = ipywidgets.Box([output])
         out_box.layout = self.make_box_layout()
@@ -53,9 +60,11 @@ class EllipsisStack(ipywidgets.HBox):
         b0_slider.observe(self.update_b0, 'value')
         np0_slider.observe(self.update_np0, 'value')
         n_slider.observe(self.update_n, 'value')
+        ms_slider.observe(self.update_ms, 'value')
         ext_slider.observe(self.update_extinction, 'value')
         dt_slider.observe(self.update_dt, 'value')
         rot_cb.observe(self.update_rot, 'value')
+        stcol_selector.observe(self.update_stcol, 'value')
 
         # Add to children
         self.children = [controls, out_box]
@@ -65,8 +74,10 @@ class EllipsisStack(ipywidgets.HBox):
 
     def create_figure_and_axis(self, white_background=False):
         bgcolor = 'w' if white_background else 'k'
+        # figsize = (11.693/2., 8.268/2.) if white_background else (11.693, 8.268)  # A4
+        figsize = (11.693, 8.268)  # A4
         self.fig, self.ax = P.subplots(subplot_kw={'facecolor': bgcolor, 'aspect': 'equal'},
-                                       constrained_layout=True, figsize=(11.693, 8.268),  # A4
+                                       constrained_layout=True, figsize=figsize,
                                        facecolor=bgcolor)
 
         height = 0.1
@@ -98,6 +109,10 @@ class EllipsisStack(ipywidgets.HBox):
         self.extinct = change.new
         self.redraw_ellipses()
 
+    def update_ms(self, change):
+        self.markersize = change.new
+        self.redraw_ellipses()
+
     def update_a0(self, change):
         self.a0 = change.new
         self.redraw_ellipses()
@@ -116,6 +131,10 @@ class EllipsisStack(ipywidgets.HBox):
 
     def update_rot(self, change):
         self.do_rot = change.new
+        self.redraw_ellipses()
+
+    def update_stcol(self, change):
+        self.star_col = change.new
         self.redraw_ellipses()
 
     def redraw_ellipses(self, savefigs=False):
@@ -138,14 +157,15 @@ class EllipsisStack(ipywidgets.HBox):
                 # print("r= ", r)
                 a = a * r
                 b = b * r
-                if self.extinct == 4:
-                    np = int(np*(1.0-N.sqrt(1.0-r)))
-                elif self.extinct == 3:
-                    np = int(np * r)
-                elif self.extinct == 2:
-                    np = int(np * (1.0 - (1.0 - r)**2))
-                elif self.extinct == 1:
-                    np = int(np * (1.0 - (1.0 - r) ** 3))
+                np = int(np * (1.0 - (1.0 - r) ** self.extinct))
+                # if self.extinct == 4:
+                #     np = int(np*(1.0-N.sqrt(1.0-r)))
+                # elif self.extinct == 3:
+                #     np = int(np * r)
+                # elif self.extinct == 2:
+                #     np = int(np * (1.0 - (1.0 - r)**2))
+                # elif self.extinct == 1:
+                #     np = int(np * (1.0 - (1.0 - r) ** 3))
 
             # Random points along a 'thick' elliptical trajectory (thickness = eps)
             eps = 0.15
@@ -161,11 +181,14 @@ class EllipsisStack(ipywidgets.HBox):
             else:
                 xrot = x
                 yrot = y
-            self.ax.plot(xrot, yrot, marker=',', color='y', linewidth=0)
+            col = "b" if self.star_col == "blue" else "r"
+            self.ax.plot(xrot, yrot, marker='o', color=col, linewidth=0, markerfacecolor=col,
+                         markersize=self.markersize, alpha=0.7)
 
             # Plot cross at origin
-            self.ax.plot([-a / 100.0, a / 100.0], [0.0, 0.0], 'y--', linewidth=1)
-            self.ax.plot([0.0, 0.0], [-a / 100.0, a / 100.0], 'y--', linewidth=1)
+            if i == 0 or savefigs:
+                self.ax.plot([-self.a0*2 / 100.0, self.a0*2 / 100.0], [0.0, 0.0], 'k--', linewidth=1)
+                self.ax.plot([0.0, 0.0], [-self.a0*2 / 100.0, self.a0*2 / 100.0], 'k--', linewidth=1)
 
             if self.plot_text:
                 self.insert_text(i)
@@ -254,7 +277,13 @@ class EllipsisStack(ipywidgets.HBox):
             yrot = y
             ang = 0.0
         self.ax.text(xrot, yrot, "o", size=10, rotation=-ang, ha="left", va="center",
-                     fontdict={'color': 'y', 'family': 'Monospace'})
+                     fontdict={'color': 'k', 'family': 'Monospace'})
+
+        # Insert ellipse number
+        x = self.a0*1.3
+        y = -self.a0*1.0
+        self.ax.text(x, y, str(self.n - iellipse), size=8, ha="center", va="center",
+                     fontdict={'color': 'k', 'family': 'Monospace'})
 
     def save_figures(self, dpi=150):
         self.create_figure_and_axis(white_background=True)

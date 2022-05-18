@@ -1,4 +1,4 @@
-# Atelier Galaxie
+U# Atelier Galaxie
 
 Using a jupyter notebook, you can generate several stellar elliptic trajectories and make them form a spiral arm pattern
 like in spiral galaxies.
